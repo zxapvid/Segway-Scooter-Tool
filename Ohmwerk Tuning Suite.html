@@ -1,0 +1,1246 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ohmwerk Tuning Suite</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Desktop-Tuningsoftware als Fenster. Titelleiste oben, Modulnavigation links, Arbeitsfläche mit Messmodulen, darunter Aktionsleiste und Statuszeile. Eine bewusst dunkle Welt; der blaue Akzent gehört nur Bedienelementen und der Drehmomentkurve. */
+:root{
+  color-scheme:dark;
+  --bg:#070b10; --win:#0c121a; --panel:#111a25; --panel2:#17222f; --line:#243244; --line2:#192433;
+  --fg:#e6ecf4; --dim:#9aa9bd; --faint:#7a8ca3;
+  --accent:#3fb8f4; --accent-ink:#04131d; --accent-soft:rgba(63,184,244,.13); --accent-line:rgba(63,184,244,.5);
+  --heat:#ff9b4a; --ok:#35d49a; --warn:#f2c14e; --crit:#ff5d5d;
+  --ok-soft:rgba(53,212,154,.12); --warn-soft:rgba(242,193,78,.12); --crit-soft:rgba(255,93,93,.13);
+  --f-ui:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--f-ui);
+  padding-block:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;border:1px solid var(--line);border-radius:10px;background:var(--win);overflow:hidden;min-height:0}
+
+/* Titelleiste */
+.titlebar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{width:26px;height:26px;stroke:var(--accent);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wm{font:700 20px/1 var(--f-cond);letter-spacing:.16em}
+.sub{font:500 13px var(--f-cond);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.ver{font:400 10.5px var(--f-mono);color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+.tb-spacer{flex:1 1 20px}
+.devsel{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint)}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-width:0;max-width:100%}
+.chip{display:inline-flex;align-items:center;gap:7px;font:500 12px var(--f-ui);padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);display:inline-block}
+.chip.ok{border-color:rgba(53,212,154,.4);background:var(--ok-soft)} .chip.ok .dot{background:var(--ok)}
+.chip.busy{border-color:rgba(242,193,78,.4);background:var(--warn-soft)} .chip.busy .dot{background:var(--warn)}
+
+/* Navigation */
+.shell{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:0}
+.nav{display:flex;flex-direction:column;gap:2px;padding:10px;border-right:1px solid var(--line);overflow:auto;background:var(--win)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;border-radius:6px;background:transparent;color:var(--dim);font-weight:500;text-align:left;cursor:pointer;white-space:nowrap}
+.nav-item:hover{background:var(--panel2);color:var(--fg)}
+.nav-item[aria-current="page"]{background:var(--accent-soft);color:var(--fg)}
+.nav-item[aria-current="page"] .ic{stroke:var(--accent)}
+.ic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.nav-foot{margin-top:auto;padding:12px 10px 4px;border-top:1px solid var(--line2);font:11px/1.6 var(--f-mono);color:var(--faint)}
+.nav-foot b{color:var(--dim);font-weight:500}
+
+/* Arbeitsfläche */
+.content{overflow:auto;min-width:0;padding:18px 20px 26px}
+.view{display:flex;flex-direction:column;gap:14px;min-width:0}
+.vh h1{margin:0;font:600 26px/1.1 var(--f-cond);letter-spacing:.05em;text-transform:uppercase}
+.vh p{margin:5px 0 0;color:var(--dim);max-width:70ch}
+.grid{display:grid;gap:14px;min-width:0}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))}
+.ov-top{display:grid;gap:14px;grid-template-columns:minmax(0,1.75fr) minmax(280px,1fr)}
+.th-grid{display:grid;gap:14px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;padding:11px 14px;border-bottom:1px solid var(--line2)}
+.panel-h h2{margin:0;font:600 13px/1.2 var(--f-cond);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.panel-b{padding:14px}
+.panel-b.rows{padding-block:4px}
+.tag{font:400 10.5px var(--f-mono);color:var(--faint);letter-spacing:.02em}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--dim)}
+.lg::before{content:"";display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.lg.t::before{border-color:var(--accent)} .lg.p::before{border-color:var(--heat)} .lg.w::before{border-top-style:dashed;border-color:var(--faint)}
+.cv{display:block;width:100%;height:280px}
+.cv.tall{height:300px}
+.cv.tele{height:230px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;background:var(--line2);border-top:1px solid var(--line2)}
+.kpi{background:var(--panel);padding:10px 14px;min-width:0}
+.kl{font:500 10.5px var(--f-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.kn{font:500 22px/1.25 var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kn small{font-size:11px;color:var(--dim);margin-left:4px}
+.kd{font:11px var(--f-mono);color:var(--faint);min-height:1.3em;font-variant-numeric:tabular-nums}
+.kd.up{color:var(--heat)} .kd.down{color:var(--accent)}
+
+/* Tuning-Stufe */
+.eyebrow{font:500 10.5px var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.stage-n{font:700 54px/1 var(--f-cond);letter-spacing:.03em;margin-top:6px}
+.stage-name{color:var(--dim);margin-top:2px}
+.segs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:14px 0 12px}
+.segs i{height:6px;border-radius:2px;background:var(--line)}
+.segs i.on{background:var(--accent)}
+.segs.hot i.on{background:var(--heat)}
+.stage-note{margin:0;color:var(--dim);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 11.5px var(--f-ui);padding:2px 9px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.pill.ok{color:var(--ok);background:var(--ok-soft);border-color:rgba(53,212,154,.35)}
+.pill.warn{color:var(--warn);background:var(--warn-soft);border-color:rgba(242,193,78,.35)}
+.pill.crit{color:var(--crit);background:var(--crit-soft);border-color:rgba(255,93,93,.4)}
+.meters{display:grid;gap:14px}
+.meter-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;font-size:13px}
+.meter-top b{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--line2);overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:var(--ok);transition:width .25s}
+.bar>i.warn{background:var(--warn)} .bar>i.crit{background:var(--crit)}
+.meter-top b.warn{color:var(--warn)} .meter-top b.crit{color:var(--crit)}
+
+.kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;background:var(--line2)}
+.kvs div{background:var(--panel);padding:10px 14px;min-width:0}
+.kvs dt{font:500 10.5px var(--f-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.kvs dd{margin:2px 0 0;font:400 13px var(--f-mono);overflow-wrap:anywhere}
+dl.kvs{margin:0}
+
+/* Parameterzeilen */
+.row{position:relative;padding:11px 0 13px 12px;border-bottom:1px solid var(--line2)}
+.row:last-child{border-bottom:0}
+.row::before{content:"";position:absolute;left:0;top:19px;width:5px;height:5px;border-radius:50%;background:transparent}
+.row.dirty::before{background:var(--accent)}
+.row.off{opacity:.45}
+.row-top{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
+.row-name{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.row-label{font-weight:500}
+.row-hint{color:var(--faint);font-size:12px;margin-top:1px;max-width:62ch}
+.row-val{font:500 15px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row-val small{color:var(--dim);font-size:11px;margin-left:4px;font-weight:400}
+.delta{font:400 11px var(--f-mono);margin-left:9px;color:var(--faint)}
+.delta.up{color:var(--heat)} .delta.down{color:var(--accent)}
+.sl{position:relative;margin-top:8px;height:20px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;margin:0;background:transparent;cursor:pointer;position:relative;z-index:1}
+input[type=range]:disabled{cursor:not-allowed}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--accent) var(--p,0%),var(--line) var(--p,0%))}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:var(--win);border:2px solid var(--accent);box-shadow:0 0 0 3px var(--win)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--win);border:2px solid var(--accent);box-shadow:0 0 0 3px var(--win)}
+.ftick{position:absolute;z-index:2;top:3px;left:calc(8px + (100% - 16px) * var(--f,0));width:2px;height:14px;margin-left:-1px;border-radius:1px;background:var(--faint);pointer-events:none;opacity:.8}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0 12px 12px;border-bottom:1px solid var(--line2);position:relative}
+.tg:last-child{border-bottom:0}
+.tg::before{content:"";position:absolute;left:0;top:50%;margin-top:-2.5px;width:5px;height:5px;border-radius:50%;background:transparent}
+.tg.dirty::before{background:var(--accent)}
+.tg-t{min-width:0}
+.sw{width:40px;height:22px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);position:relative;flex:none;cursor:pointer;padding:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--faint);transition:transform .15s,background .15s}
+.sw[aria-checked="true"]{background:var(--accent-soft);border-color:var(--accent-line)}
+.sw[aria-checked="true"]::after{transform:translateX(18px);background:var(--accent)}
+
+/* Bedienelemente */
+.btn{font:500 13px var(--f-ui);padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--faint)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+kbd{font:400 10.5px var(--f-mono);border:1px solid currentColor;border-radius:3px;padding:0 4px;margin-left:8px;opacity:.7}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;overflow:hidden;align-self:flex-start;background:var(--panel)}
+.seg button{padding:7px 15px;background:transparent;border:0;border-right:1px solid var(--line);color:var(--dim);cursor:pointer;font-weight:500}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--fg)}
+.seg button:hover{color:var(--fg)}
+.presets{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.presets span{font-size:12px;color:var(--faint)}
+.hint-line{padding:0 14px 12px;font-size:12px;color:var(--faint)}
+
+/* Tabelle */
+.scroll-x{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font:500 10.5px var(--f-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--faint);text-align:left}
+.tbl th,.tbl td{padding:10px 14px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.tbl td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tbl td:first-child{font-family:var(--f-ui);font-weight:500}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover{background:var(--panel2)}
+.tbl tbody tr.act{background:var(--accent-soft)}
+.tbl tbody tr:last-child td{border-bottom:0}
+
+/* Zellen */
+.cells{display:grid;grid-template-columns:repeat(14,minmax(22px,1fr));gap:6px;height:210px;padding:14px;min-width:400px}
+.cell{display:flex;flex-direction:column;align-items:center;gap:6px;height:100%}
+.cb{width:100%;flex:1;display:flex;align-items:flex-end;background:var(--line2);border-radius:3px;overflow:hidden}
+.cb i{display:block;width:100%;height:50%;background:var(--accent);transition:height .4s}
+.cell.bal .cb i{background:var(--heat)}
+.cell span{font:10px var(--f-mono);color:var(--faint)}
+
+/* Konformität */
+.cl{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.cl small{display:block;color:var(--faint);font-size:12px}
+.cl-note{padding:12px 14px;color:var(--dim);font-size:13px}
+
+/* Protokoll */
+.log{font:12px/1.65 var(--f-mono);padding:12px 14px;height:min(62vh,560px);min-height:260px;overflow:auto;color:var(--dim)}
+.log .t{color:var(--faint)}
+.log .k{display:inline-block;min-width:6ch;color:var(--faint)}
+.log .k.ble,.log .k.read,.log .k.auth{color:var(--accent)}
+.log .k.set{color:var(--fg)}
+.log .k.warn{color:var(--warn)}
+.log .k.write{color:var(--ok)}
+
+/* Aktionsleiste und Status */
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:10px 14px;border-top:1px solid var(--line);background:var(--panel)}
+.actions label{font-size:12px;color:var(--faint)}
+.pend{flex:1 1 180px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim)}
+.act-r{display:flex;gap:10px;flex-wrap:wrap}
+.status{display:flex;flex-wrap:wrap;gap:4px 18px;padding:6px 14px;border-top:1px solid var(--line);background:var(--win);font:11px/1.5 var(--f-mono);color:var(--faint)}
+.status .sp{margin-left:auto}
+.status b{font-weight:500;color:var(--dim)}
+
+/* Dialog */
+.modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(3,6,10,.74);z-index:50;padding:16px}
+.dlg{width:min(580px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.dlg-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line2)}
+.dlg-h h2{margin:0;font:600 18px var(--f-cond);letter-spacing:.08em;text-transform:uppercase}
+.dlg-b{padding:16px;display:flex;flex-direction:column;gap:14px}
+.dlg-b p{margin:0;color:var(--dim)}
+.dlg-f{display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid var(--line2)}
+.fine{font-size:12px;color:var(--faint)}
+.diff{border:1px solid var(--line2);border-radius:6px;max-height:190px;overflow:auto;font:12px/1.5 var(--f-mono)}
+.diff div{display:flex;justify-content:space-between;gap:12px;padding:6px 10px;border-bottom:1px solid var(--line2)}
+.diff div:last-child{border-bottom:0}
+.diff span:first-child{color:var(--faint)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--dim);cursor:pointer}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.steps li{display:flex;gap:12px;align-items:flex-start;color:var(--faint)}
+.steps li b{font-weight:500;display:block}
+.steps li small{font:11.5px var(--f-mono);color:var(--faint)}
+.si{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);flex:none;margin-top:2px;position:relative}
+.steps li[data-s="run"]{color:var(--fg)}
+.steps li[data-s="run"] .si{border-color:var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+.steps li[data-s="done"]{color:var(--dim)}
+.steps li[data-s="done"] .si{background:var(--ok);border-color:var(--ok)}
+.steps li[data-s="done"] .si::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prog{height:6px;background:var(--line2);border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--panel2);border:1px solid var(--accent-line);border-radius:8px;padding:9px 16px;font-size:13px;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+
+@media (max-width:1000px){
+  .ov-top,.th-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:820px){
+  html,body{height:auto;min-height:100%}
+  .app{height:auto;display:block;overflow:visible}
+  .shell{display:block}
+  .nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px}
+  .nav-foot{display:none}
+  .content{overflow:visible;padding:16px 12px 24px}
+  .actions{position:sticky;bottom:0;z-index:5}
+  .sub{display:none}
+  .status .opt{display:none}
+}
+@media (max-width:480px){
+  .cv{height:250px}
+  .stage-n{font-size:46px}
+  .vh h1{font-size:23px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h5.2A7.5 7.5 0 1 1 14.8 19H20"/></svg>
+      <span class="wm">OHMWERK</span><span class="sub">Tuning Suite</span><span class="ver">Pro 4.2.1</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <label class="devsel"><span>Gerät</span>
+      <select id="dev" aria-label="Verbundenes Gerät">
+        <option value="g3">Ninebot G3 Max · 4A:7F:C2</option>
+        <option value="s1">Joyor S1 · 91:0D:E4</option>
+        <option value="x4">Xiaomi 4 Pro · C3:55:1A</option>
+        <option value="gen">BLDC-Controller · 22:B8:7E</option>
+      </select>
+    </label>
+    <div class="chip ok" id="conn" role="status"><i class="dot"></i><span id="connT">Verbunden</span></div>
+  </header>
+
+  <div class="shell">
+    <nav class="nav" aria-label="Module">
+      <button class="nav-item" data-view="overview" aria-current="page"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Übersicht</span></button>
+      <button class="nav-item" data-view="motor"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 4v5.5M12 14.5V20M4 12h5.5M14.5 12H20"/></svg><span>Motor</span></button>
+      <button class="nav-item" data-view="throttle"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20C10 20 11 5 21 5"/><path d="M3 20h18" opacity=".45"/></svg><span>Gas &amp; Bremse</span></button>
+      <button class="nav-item" data-view="battery"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3M7 10v4M11 10v4"/></svg><span>Akku &amp; BMS</span></button>
+      <button class="nav-item" data-view="modes"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h8M20 7h-2M4 12h2M14 12h6M4 17h10M20 17h-2"/><circle cx="15" cy="7" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="16" cy="17" r="2"/></svg><span>Fahrmodi</span></button>
+      <button class="nav-item" data-view="safety"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 7.8-8 9-4.8-1.2-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Schutz &amp; Zulassung</span></button>
+      <button class="nav-item" data-view="log"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6l5 5-5 5M12 18h8"/></svg><span>Protokoll</span></button>
+      <div class="nav-foot">
+        <div><b>Lizenz</b> Professional</div>
+        <div><b>Inhaber</b> Werkstatt-Lizenz</div>
+        <div><b>Treiber</b> BLE-GATT 2.3</div>
+      </div>
+    </nav>
+
+    <main class="content" id="content">
+
+      <!-- Übersicht -->
+      <section class="view" id="v-overview">
+        <header class="vh"><h1>Übersicht</h1><p>Berechnete Leistungskurve und Live-Daten für den aktuellen Parametersatz.</p></header>
+        <div class="ov-top">
+          <div class="panel">
+            <div class="panel-h"><h2>Dyno-Simulation</h2><div class="legend"><span class="lg t">Drehmoment</span><span class="lg p">Leistung</span><span class="lg w">Werk</span></div></div>
+            <canvas class="cv" id="dyno" role="img" aria-label="Drehmoment und Leistung über der Geschwindigkeit"></canvas>
+            <div class="kpis">
+              <div class="kpi"><div class="kl">Spitzenleistung</div><div class="kn"><span id="kPw">0.00</span><small>kW</small></div><div class="kd" id="kPwD"></div></div>
+              <div class="kpi"><div class="kl">Max. Drehmoment</div><div class="kn"><span id="kTq">0.0</span><small>Nm</small></div><div class="kd" id="kTqD"></div></div>
+              <div class="kpi"><div class="kl">Vmax real</div><div class="kn"><span id="kVm">0</span><small>km/h</small></div><div class="kd" id="kVmD"></div></div>
+              <div class="kpi"><div class="kl">0–20 km/h</div><div class="kn"><span id="kAc">0.0</span><small>s</small></div><div class="kd" id="kAcD"></div></div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="panel"><div class="panel-b">
+              <div class="eyebrow">Tuning-Stufe</div>
+              <div class="stage-n" id="stageN">STAGE 0</div>
+              <div class="stage-name" id="stageName">Serienzustand</div>
+              <div class="segs" id="stageSegs"><i></i><i></i><i></i><i></i><i></i></div>
+              <p class="stage-note" id="stageNote"></p>
+              <div style="margin-top:12px"><span class="pill ok" id="ekfv">eKFV konform</span></div>
+            </div></div>
+            <div class="panel">
+              <div class="panel-h"><h2>Belastung</h2><span class="tag">in % der Nennwerte</span></div>
+              <div class="panel-b meters">
+                <div><div class="meter-top"><span>Controller</span><b id="ldC">0 %</b></div><div class="bar"><i id="brC"></i></div></div>
+                <div><div class="meter-top"><span>Motorwicklung</span><b id="ldM">0 %</b></div><div class="bar"><i id="brM"></i></div></div>
+                <div><div class="meter-top"><span>Akkupack</span><b id="ldB">0 %</b></div><div class="bar"><i id="brB"></i></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h"><h2>Live-Telemetrie</h2><span class="tag" id="teleTag">20 Hz · BLE-Notify</span></div>
+          <div class="kpis">
+            <div class="kpi"><div class="kl">Geschwindigkeit</div><div class="kn"><span id="rdV">0.0</span><small>km/h</small></div></div>
+            <div class="kpi"><div class="kl">Phasenstrom</div><div class="kn"><span id="rdI">0.0</span><small>A</small></div></div>
+            <div class="kpi"><div class="kl">Akkuspannung</div><div class="kn"><span id="rdU">0.0</span><small>V</small></div></div>
+            <div class="kpi"><div class="kl">Controller</div><div class="kn"><span id="rdTc">0</span><small>°C</small></div></div>
+            <div class="kpi"><div class="kl">Motor</div><div class="kn"><span id="rdTm">0</span><small>°C</small></div></div>
+          </div>
+          <canvas class="cv tele" id="tele" role="img" aria-label="Verlauf von Geschwindigkeit, Phasenstrom und Akkuspannung"></canvas>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h"><h2>Geräteinformationen</h2><span class="tag" id="crcTag">CRC32 –</span></div>
+          <dl class="kvs">
+            <div><dt>Modell</dt><dd id="iModel"></dd></div>
+            <div><dt>Seriennummer</dt><dd id="iSn"></dd></div>
+            <div><dt>Controller (MCU)</dt><dd>Cortex-M4F · 120 MHz</dd></div>
+            <div><dt>Fahrzeugsteuerung (VCU)</dt><dd>Cortex-M3 · 72 MHz</dd></div>
+            <div><dt>BMS</dt><dd id="iBms"></dd></div>
+            <div><dt>Firmware</dt><dd id="iFw"></dd></div>
+            <div><dt>Bootloader</dt><dd id="iBl"></dd></div>
+            <div><dt>Gesamtstrecke</dt><dd id="iKm"></dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Motor -->
+      <section class="view" id="v-motor" hidden>
+        <header class="vh"><h1>Motor</h1><p>Strom- und Drehzahlgrenzen sowie die Parameter der feldorientierten Regelung.</p></header>
+        <div class="grid g-2">
+          <div class="panel"><div class="panel-h"><h2>Leistungsgrenzen</h2><span class="tag">MOT / BAT / VCU</span></div><div class="panel-b rows" data-g="power"></div></div>
+          <div class="panel"><div class="panel-h"><h2>Feldorientierte Regelung</h2><span class="tag">FOC</span></div><div class="panel-b rows" data-g="foc"></div></div>
+        </div>
+      </section>
+
+      <!-- Gas & Bremse -->
+      <section class="view" id="v-throttle" hidden>
+        <header class="vh"><h1>Gas &amp; Bremse</h1><p>Die Kennlinie ziehen oder die Stützpunkte per Regler einstellen. Der orange Punkt zeigt die aktuelle Pedalstellung der Simulation.</p></header>
+        <div class="th-grid">
+          <div class="panel">
+            <div class="panel-h"><h2>Gaskennlinie</h2><span class="tag">THR.CRV</span></div>
+            <div class="presets"><span>Vorlage</span>
+              <div class="seg" id="curveSeg" role="group" aria-label="Kennlinienvorlage">
+                <button type="button" data-c="werk">Werk</button><button type="button" data-c="soft">Sanft</button><button type="button" data-c="lin">Linear</button><button type="button" data-c="agg">Aggressiv</button>
+              </div>
+            </div>
+            <canvas class="cv tall" id="curve" style="touch-action:none" role="img" aria-label="Gaskennlinie mit vier ziehbaren Stützpunkten"></canvas>
+            <div class="panel-b rows" data-g="curve" style="padding-top:0"></div>
+          </div>
+          <div class="stack">
+            <div class="panel"><div class="panel-h"><h2>Pedal</h2><span class="tag">THR</span></div><div class="panel-b rows" data-g="pedal"></div></div>
+            <div class="panel"><div class="panel-h"><h2>Rekuperation</h2><span class="tag">REG</span></div><div class="panel-b rows" data-g="regen"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Akku -->
+      <section class="view" id="v-battery" hidden>
+        <header class="vh"><h1>Akku &amp; BMS</h1><p>Zellspannungen des 14S-Packs, Abschaltgrenzen und Ladeparameter.</p></header>
+        <div class="grid g-2">
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-h"><h2>Zellspannungen</h2><span class="tag" id="cellTag">Δ 0 mV</span></div>
+              <div class="scroll-x"><div class="cells" id="cells" role="img" aria-label="Spannung der 14 Zellen"></div></div>
+              <div class="kpis">
+                <div class="kpi"><div class="kl">Pack</div><div class="kn"><span id="bPack">0.0</span><small>V</small></div></div>
+                <div class="kpi"><div class="kl">Ladezustand</div><div class="kn"><span id="bSoc">0</span><small>%</small></div></div>
+                <div class="kpi"><div class="kl">Zellen min / max</div><div class="kn" style="font-size:12.5px;white-space:normal;padding-top:6px"><span id="bMinMax">–</span></div></div>
+                <div class="kpi"><div class="kl">Zustand</div><div class="kn" style="font-size:14px;white-space:normal;padding-top:4px"><span id="bState">–</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel"><div class="panel-h"><h2>Grenzen &amp; Laden</h2><span class="tag">BMS / CHG</span></div><div class="panel-b rows" data-g="bms"></div></div>
+        </div>
+      </section>
+
+      <!-- Fahrmodi -->
+      <section class="view" id="v-modes" hidden>
+        <header class="vh"><h1>Fahrmodi</h1><p>Jeder Modus skaliert das Geschwindigkeitslimit, die Beschleunigung und die Rekuperation. Der gewählte Modus ist aktiv.</p></header>
+        <div class="seg" id="modeSeg" role="group" aria-label="Fahrmodus"></div>
+        <div class="grid g-2">
+          <div class="panel"><div class="panel-h"><h2 id="modeTitle">Modus Sport</h2><span class="tag" id="modeTag">VCU.MODE</span></div><div class="panel-b rows" id="modeRows"></div></div>
+          <div class="panel"><div class="panel-h"><h2>Vergleich</h2><span class="tag">alle Modi</span></div>
+            <div class="scroll-x"><table class="tbl"><thead><tr><th>Modus</th><th>Vmax</th><th>Beschl.</th><th>Rekup.</th><th>Spitze</th></tr></thead><tbody id="modeTbl"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Schutz -->
+      <section class="view" id="v-safety" hidden>
+        <header class="vh"><h1>Schutz &amp; Zulassung</h1><p>Temperaturgrenzen, Abschaltlogik und eine Übersicht, welche Änderungen die Zulassung betreffen.</p></header>
+        <div class="grid g-2">
+          <div class="panel"><div class="panel-h"><h2>Schutzfunktionen</h2><span class="tag">THM / PRT</span></div><div class="panel-b rows" data-g="prot"></div></div>
+          <div class="panel"><div class="panel-h"><h2>Zulassungsprüfung</h2><span class="tag">eKFV</span></div>
+            <div id="compl"></div>
+            <div class="cl-note">Fahrzeuge mit erhöhter Leistung oder Geschwindigkeit dürfen nur auf Privatgelände betrieben werden.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Protokoll -->
+      <section class="view" id="v-log" hidden>
+        <header class="vh"><h1>Protokoll</h1><p>Alle Zugriffe und Parameteränderungen dieser Sitzung.</p></header>
+        <div class="panel">
+          <div class="panel-h"><h2>Sitzungsprotokoll</h2><button class="btn" id="logClear" type="button" style="padding:4px 10px;font-size:12px">Leeren</button></div>
+          <div class="log" id="logBody" role="log"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="actions">
+    <label for="prof">Profil</label>
+    <select id="prof">
+      <option value="custom" hidden>Benutzerdefiniert</option>
+      <option value="werk">Werkseinstellung</option>
+      <option value="s1">Stage 1 · Alltag</option>
+      <option value="s2">Stage 2 · Sport</option>
+      <option value="s3">Stage 3 · Maximal</option>
+      <option value="off">Gelände · Drehmoment</option>
+    </select>
+    <div class="pend"><i class="dot" id="pendDot"></i><span id="pendT">Gerät und Editor sind synchron</span></div>
+    <div class="act-r">
+      <button class="btn" id="btnReset" type="button">Auf Werk zurücksetzen</button>
+      <button class="btn primary" id="btnWrite" type="button" disabled>Auf Gerät schreiben<kbd>Strg+S</kbd></button>
+    </div>
+  </div>
+
+  <footer class="status">
+    <span><i class="dot" style="background:var(--ok)"></i> <b id="stDev">BLE</b></span>
+    <span class="opt">FW <b id="stFw">3.2.18</b></span>
+    <span>UBat <b id="stU">0.0 V</b></span>
+    <span class="opt">Modus <b id="stMode">Sport</b></span>
+    <span>Betrieb <b>Simulation</b></span>
+    <span class="sp" id="clock">--:--:--</span>
+  </footer>
+</div>
+
+<div class="modal" id="flashModal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="fmT">
+    <div class="dlg-h"><h2 id="fmT">Parameter schreiben</h2><span class="tag" id="fmDev"></span></div>
+    <div class="dlg-b">
+      <div id="fmPre" style="display:flex;flex-direction:column;gap:14px">
+        <p>Der Controller wird für etwa 12 Sekunden vom Bus getrennt. Fahrzeug nicht ausschalten und kein Ladegerät anschließen.</p>
+        <div class="diff" id="fmDiff"></div>
+        <label class="chk"><input type="checkbox" id="fmAck"><span>Ich habe die Hinweise gelesen und trage die Verantwortung für Änderungen an der Fahrzeugsoftware.</span></label>
+      </div>
+      <div id="fmRun" hidden style="display:none;flex-direction:column;gap:14px">
+        <div class="prog"><i id="fmBar"></i></div>
+        <ol class="steps" id="fmSteps"></ol>
+        <div id="fmDone" hidden><span class="pill ok">Parameter übernommen</span></div>
+      </div>
+      <div class="fine">Simulationsmodus: Es werden keine Daten an ein Fahrzeug gesendet.</div>
+    </div>
+    <div class="dlg-f"><button class="btn" id="fmCancel" type="button">Abbrechen</button><button class="btn primary" id="fmGo" type="button" disabled>Schreiben starten</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var clamp=function(x,a,b){return Math.min(b,Math.max(a,x))};
+var rootCss=getComputedStyle(document.documentElement);
+var cv=function(n){return rootCss.getPropertyValue(n).trim()};
+var COL={accent:cv('--accent'),heat:cv('--heat'),ok:cv('--ok'),warn:cv('--warn'),crit:cv('--crit'),line:cv('--line'),line2:cv('--line2'),faint:cv('--faint'),dim:cv('--dim'),fg:cv('--fg'),panel:cv('--panel')};
+var MONO="'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace";
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Parameter ---------- */
+var defs=[
+ {id:'phase',code:'MOT.IPH_MAX',label:'Max. Phasenstrom',unit:'A',min:15,max:90,step:1,def:30,hint:'Spitzenstrom je Phase. Bestimmt das Anfahrmoment.'},
+ {id:'ibat',code:'BAT.IDC_MAX',label:'Max. Akkustrom',unit:'A',min:8,max:60,step:1,def:18,hint:'Entladestrom aus dem Pack. Begrenzt die Spitzenleistung.'},
+ {id:'vmax',code:'VCU.VMAX',label:'Geschwindigkeitslimit',unit:'km/h',min:6,max:120,step:1,def:20,hint:'Harte Obergrenze der Fahrzeugsteuerung.'},
+ {id:'ramp',code:'MOT.DI_DT',label:'Stromanstieg',unit:'A/ms',min:0.5,max:10,step:0.5,def:2.5,hint:'Wie schnell der Strom nach einem Gaswechsel steigt.'},
+ {id:'fw',code:'FOC.FW_LVL',label:'Feldschwächung',unit:'%',min:0,max:40,step:1,def:0,needs:'fwOn',hint:'Hebt die Drehzahlgrenze an und kostet Moment im oberen Bereich.'},
+ {id:'adv',code:'FOC.ADV_DEG',label:'Phasenvorstellung',unit:'°',min:0,max:20,step:1,def:0,hint:'Verschiebt den Kommutierungswinkel in Drehrichtung.'},
+ {id:'pwm',code:'FOC.PWM_KHZ',label:'PWM-Frequenz',unit:'kHz',min:8,max:32,step:1,def:16,hint:'Höher läuft leiser, bringt aber mehr Schaltverluste.'},
+ {id:'dt',code:'FOC.DEADTIME',label:'Totzeit Halbbrücke',unit:'ns',min:200,max:1200,step:50,def:500,hint:'Sicherheitsabstand zwischen High- und Low-Side.'},
+ {id:'c20',code:'THR.CRV[1]',label:'Stützpunkt 1 (20 %)',unit:'%',min:0,max:100,step:1,def:14},
+ {id:'c40',code:'THR.CRV[2]',label:'Stützpunkt 2 (40 %)',unit:'%',min:0,max:100,step:1,def:34},
+ {id:'c60',code:'THR.CRV[3]',label:'Stützpunkt 3 (60 %)',unit:'%',min:0,max:100,step:1,def:56},
+ {id:'c80',code:'THR.CRV[4]',label:'Stützpunkt 4 (80 %)',unit:'%',min:0,max:100,step:1,def:78},
+ {id:'gdz',code:'THR.DEADZONE',label:'Gas-Totzone',unit:'%',min:0,max:30,step:1,def:8,hint:'Weg am Hebel, bevor Leistung abgerufen wird.'},
+ {id:'gfl',code:'THR.FILTER',label:'Gas-Filterzeit',unit:'ms',min:20,max:400,step:10,def:160,hint:'Kleinere Werte reagieren direkter, aber ruckartiger.'},
+ {id:'rg',code:'REG.STRENGTH',label:'Rekuperation',unit:'%',min:0,max:100,step:1,def:40},
+ {id:'rgi',code:'REG.IDC_MAX',label:'Max. Rekuperationsstrom',unit:'A',min:0,max:40,step:1,def:12},
+ {id:'rgv',code:'REG.V_MIN',label:'Rekuperation ab',unit:'km/h',min:2,max:15,step:1,def:6},
+ {id:'uv',code:'BMS.UV_CUT',label:'Unterspannungsabschaltung',unit:'V',min:36,max:48,step:0.1,def:40,hint:'Unter diesem Wert schaltet der Controller ab.'},
+ {id:'ov',code:'BMS.CHG_CUT',label:'Ladeschlussspannung',unit:'V',min:54,max:58.8,step:0.1,def:58.4},
+ {id:'chg',code:'CHG.I_SET',label:'Ladestrom',unit:'A',min:1,max:10,step:0.5,def:2},
+ {id:'bal',code:'BMS.BAL_DV',label:'Balancing-Schwelle',unit:'mV',min:2,max:50,step:1,def:10,hint:'Ab diesem Abstand zur schwächsten Zelle wird ausgeglichen.'},
+ {id:'soc',code:'BMS.SOC_RSV',label:'Notlauf-Reserve',unit:'%',min:0,max:20,step:1,def:5},
+ {id:'tc',code:'THM.CTRL_MAX',label:'Controller-Temperaturlimit',unit:'°C',min:60,max:110,step:1,def:85},
+ {id:'tm',code:'THM.MOT_MAX',label:'Motor-Temperaturlimit',unit:'°C',min:70,max:150,step:1,def:120},
+ {id:'tb',code:'THM.BAT_MAX',label:'Akku-Temperaturlimit',unit:'°C',min:40,max:70,step:1,def:60},
+ {id:'oc',code:'PRT.OC_TRIP',label:'Überstrom-Auslösezeit',unit:'ms',min:1,max:50,step:1,def:10,hint:'Kürzer schützt die Endstufe besser, löst aber früher aus.'}
+];
+var toggles=[
+ {id:'lnc',code:'MOT.LAUNCH',label:'Anfahr-Boost',hint:'Erhöht den Strom in den ersten 1,5 Sekunden.',def:false},
+ {id:'fwOn',code:'FOC.FW_EN',label:'Feldschwächung aktivieren',hint:'Gibt den Regler für den oberen Drehzahlbereich frei.',def:false},
+ {id:'sine',code:'FOC.SINE',label:'Sinus-Kommutierung',hint:'Leiserer Lauf bei etwas mehr Rechenlast.',def:true},
+ {id:'bbal',code:'BMS.BAL_RUN',label:'Balancing während der Fahrt',def:false},
+ {id:'tchg',code:'CHG.TEMP',label:'Temperaturgeführtes Laden',def:true},
+ {id:'ocp',code:'PRT.OC_EN',label:'Überstromabschaltung',def:true},
+ {id:'der',code:'THM.DERATE',label:'Thermisches Derating',hint:'Reduziert den Strom ab 90 % des Temperaturlimits.',def:true},
+ {id:'ktg',code:'THR.KICK',label:'Kick-to-Go',hint:'Gas wird erst nach dem Anschieben freigegeben.',def:true},
+ {id:'ble',code:'COM.BLE_LOCK',label:'Bluetooth-Kopplung sperren',def:false},
+ {id:'dtc',code:'DIAG.CLR_ON_WR',label:'Fehlerspeicher beim Schreiben löschen',def:false}
+];
+var MODES=[{k:'eco',n:'Eco',v:60,a:40,r:60},{k:'drv',n:'Drive',v:80,a:65,r:45},{k:'spt',n:'Sport',v:100,a:85,r:30},{k:'rce',n:'Race',v:100,a:100,r:15}];
+MODES.forEach(function(m,i){
+ defs.push({id:m.k+'_v',code:'VCU.MODE['+i+'].V',label:'Geschwindigkeit',unit:'% Limit',min:30,max:100,step:1,def:m.v,hint:'Anteil des globalen Geschwindigkeitslimits.'});
+ defs.push({id:m.k+'_a',code:'VCU.MODE['+i+'].A',label:'Beschleunigung',unit:'%',min:10,max:100,step:1,def:m.a,hint:'Skaliert die abgerufene Leistung aus der Gaskennlinie.'});
+ defs.push({id:m.k+'_r',code:'VCU.MODE['+i+'].R',label:'Rekuperation',unit:'%',min:0,max:100,step:1,def:m.r});
+});
+var layout={
+ power:['phase','ibat','vmax','ramp','lnc'],
+ foc:['fwOn','fw','adv','pwm','dt','sine'],
+ curve:['c20','c40','c60','c80'],
+ pedal:['gdz','gfl'],
+ regen:['rg','rgi','rgv'],
+ bms:['uv','ov','chg','bal','soc','bbal','tchg'],
+ prot:['tc','tm','tb','oc','ocp','der','ktg','ble','dtc']
+};
+var dmap={},tmap={},S={},B={},F={};
+defs.forEach(function(d){dmap[d.id]=d;S[d.id]=B[d.id]=F[d.id]=d.def});
+toggles.forEach(function(t){tmap[t.id]=t;S[t.id]=B[t.id]=F[t.id]=t.def});
+S.mode=B.mode=F.mode='spt';
+var CIDS=['c20','c40','c60','c80'];
+var reg={};
+var curProf='werk';
+
+function decOf(d){var s=String(d.step);return s.indexOf('.')>=0?s.split('.')[1].length:0}
+function snap(d,v){v=clamp(v,d.min,d.max);var q=Math.round((v-d.min)/d.step)*d.step+d.min;return +clamp(q,d.min,d.max).toFixed(decOf(d))}
+function fnum(d,v){return v.toFixed(decOf(d)).replace('.',',')}
+
+/* ---------- Protokoll ---------- */
+var logEl=$('#logBody');
+function stamp(dt){return (dt||new Date()).toLocaleTimeString('de-DE',{hour12:false})}
+function addLog(kind,msg,at){
+ var el=document.createElement('div');
+ el.innerHTML='<span class="t">'+stamp(at)+'</span> <span class="k '+kind.toLowerCase()+'">'+kind+'</span> '+msg;
+ logEl.appendChild(el);
+ while(logEl.children.length>400)logEl.removeChild(logEl.firstChild);
+ logEl.scrollTop=logEl.scrollHeight;
+}
+var logTimers={};
+function queueLog(id){
+ clearTimeout(logTimers[id]);
+ logTimers[id]=setTimeout(function(){
+  var d=dmap[id],t=tmap[id];
+  if(d){var diff=+(S[id]-d.def).toFixed(4);addLog('SET',d.code+' = '+fnum(d,S[id])+' '+d.unit+' (Werk '+fnum(d,d.def)+(diff?', Δ '+(diff>0?'+':'−')+fnum(d,Math.abs(diff)):'')+')')}
+  else if(t){addLog('SET',t.code+' = '+(S[id]?'EIN':'AUS'))}
+ },450);
+}
+
+/* ---------- Zeilen ---------- */
+function buildRow(d){
+ var row=document.createElement('div');row.className='row';
+ row.innerHTML='<div class="row-top"><div class="row-name"><label class="row-label" for="in-'+d.id+'">'+d.label+'</label><span class="tag">'+d.code+'</span></div>'+
+  '<div class="row-val"><span class="v"></span><small>'+d.unit+'</small><span class="delta"></span></div></div>'+
+  (d.hint?'<div class="row-hint">'+d.hint+'</div>':'')+
+  '<div class="sl"><input type="range" id="in-'+d.id+'" min="'+d.min+'" max="'+d.max+'" step="'+d.step+'"><i class="ftick" title="Werkswert"></i></div>';
+ var input=$('input',row);
+ input.addEventListener('input',function(){setParam(d.id,parseFloat(input.value),'user')});
+ reg[d.id]={kind:'range',d:d,row:row,input:input,v:$('.v',row),delta:$('.delta',row)};
+ $('.sl',row).style.setProperty('--f',((d.def-d.min)/(d.max-d.min)).toFixed(4));
+ syncRow(d.id);
+ return row;
+}
+function buildToggle(t){
+ var row=document.createElement('div');row.className='tg';
+ row.innerHTML='<div class="tg-t"><div class="row-name"><span class="row-label">'+t.label+'</span><span class="tag">'+t.code+'</span></div>'+(t.hint?'<div class="row-hint">'+t.hint+'</div>':'')+'</div>'+
+  '<button type="button" class="sw" role="switch" aria-label="'+t.label+'"></button>';
+ var btn=$('.sw',row);
+ btn.addEventListener('click',function(){setToggle(t.id,!S[t.id],'user')});
+ reg[t.id]={kind:'toggle',t:t,row:row,btn:btn};
+ syncRow(t.id);
+ return row;
+}
+function syncRow(id){
+ var r=reg[id];if(!r)return;
+ if(r.kind==='toggle'){
+  r.btn.setAttribute('aria-checked',S[id]?'true':'false');
+  r.row.classList.toggle('dirty',S[id]!==B[id]);
+  return;
+ }
+ var d=r.d,v=S[id];
+ r.input.value=v;
+ r.input.style.setProperty('--p',((v-d.min)/(d.max-d.min)*100).toFixed(2)+'%');
+ r.v.textContent=fnum(d,v);
+ var diff=+(v-d.def).toFixed(4);
+ r.delta.textContent=diff?(diff>0?'+':'−')+fnum(d,Math.abs(diff)):'';
+ r.delta.className='delta'+(diff>0?' up':diff<0?' down':'');
+ r.row.classList.toggle('dirty',S[id]!==B[id]);
+ var off=!!(d.needs&&!S[d.needs]);
+ r.row.classList.toggle('off',off);r.input.disabled=off;
+}
+function syncAll(){Object.keys(reg).forEach(syncRow)}
+function buildGroup(el,ids){
+ ids.forEach(function(id){el.appendChild(dmap[id]?buildRow(dmap[id]):buildToggle(tmap[id]))});
+}
+
+/* ---------- Setzen ---------- */
+var curveFn=null;
+function spline(xs,ys){
+ var n=xs.length,d=[],m=[],i;
+ for(i=0;i<n-1;i++)d[i]=(ys[i+1]-ys[i])/(xs[i+1]-xs[i]);
+ m[0]=d[0];m[n-1]=d[n-2];
+ for(i=1;i<n-1;i++)m[i]=(d[i-1]*d[i]<=0)?0:(d[i-1]+d[i])/2;
+ for(i=0;i<n-1;i++){
+  if(d[i]===0){m[i]=0;m[i+1]=0;continue}
+  var a=m[i]/d[i],b=m[i+1]/d[i],s=a*a+b*b;
+  if(s>9){var t=3/Math.sqrt(s);m[i]=t*a*d[i];m[i+1]=t*b*d[i]}
+ }
+ return function(x){
+  if(x<=xs[0])return ys[0];if(x>=xs[n-1])return ys[n-1];
+  var k=0;while(x>xs[k+1])k++;
+  var h=xs[k+1]-xs[k],t=(x-xs[k])/h,t2=t*t,t3=t2*t;
+  return (2*t3-3*t2+1)*ys[k]+(t3-2*t2+t)*h*m[k]+(-2*t3+3*t2)*ys[k+1]+(t3-t2)*h*m[k+1];
+ };
+}
+function rebuildCurve(){curveFn=spline([0,.2,.4,.6,.8,1],[0,S.c20/100,S.c40/100,S.c60/100,S.c80/100,1])}
+function curveMap(x){return clamp(curveFn(clamp(x,0,1)),0,1)}
+function pedalOut(xp){var dz=S.gdz;return xp<=dz?0:curveMap((xp-dz)/(100-dz))*100}
+function enforceCurve(id){
+ var i=CIDS.indexOf(id);if(i<0)return;
+ var j;for(j=i+1;j<4;j++)S[CIDS[j]]=Math.max(S[CIDS[j]],S[id]);
+ for(j=i-1;j>=0;j--)S[CIDS[j]]=Math.min(S[CIDS[j]],S[id]);
+ CIDS.forEach(syncRow);
+}
+function setProfileSel(v){curProf=v;$('#prof').value=v}
+function setParam(id,v,src){
+ var d=dmap[id];v=snap(d,v);
+ if(S[id]===v){syncRow(id);return}
+ S[id]=v;
+ if(CIDS.indexOf(id)>=0){enforceCurve(id);rebuildCurve()}
+ syncRow(id);
+ if(src==='user'){setProfileSel('custom');queueLog(id)}
+ scheduleUpdate();
+}
+function setToggle(id,val,src){
+ val=!!val;if(S[id]===val)return;
+ S[id]=val;syncRow(id);
+ if(id==='fwOn')syncRow('fw');
+ if(src==='user'){setProfileSel('custom');queueLog(id)}
+ scheduleUpdate();
+}
+
+/* ---------- Modell ---------- */
+var R=0.13,MASS=100,VNOM=52;
+function model(P){
+ var fw=P.fwOn?P.fw:0;
+ var tmax=P.phase*0.62*(1+P.adv*0.004);
+ var pcap=VNOM*P.ibat*0.92;
+ var noload=46*(1+fw/60);
+ var vbase=noload*0.45;
+ var vlim=Math.min(P.vmax,noload*0.93);
+ var m={tmax:tmax,pcap:pcap,noload:noload,vlim:vlim};
+ m.T=function(v){
+  var t=v<=vbase?tmax:tmax*Math.max(0,(noload-v)/(noload-vbase));
+  if(v>0.5){var w=v/3.6/R,p=t*w;if(p>pcap)t=pcap/w}
+  return t;
+ };
+ m.Pw=function(v){return m.T(v)*(v/3.6/R)};
+ var pk=0,pv=0,v;
+ for(v=0.5;v<=vlim;v+=0.5){var p=m.Pw(v);if(p>pk){pk=p;pv=v}}
+ m.peakP=pk;m.peakV=pv;m.peakT=m.T(0);
+ var vv=0,t=0,dt=0.02;
+ if(vlim<19.99){m.t020=null}
+ else{
+  while(vv*3.6<20&&t<30){
+   var kmh=vv*3.6,tq=m.T(Math.max(kmh,0.3));
+   if(P.lnc&&t<1.5)tq*=1.12;
+   var Fd=tq*0.88/R,drag=12+0.32*vv*vv;
+   vv+=Math.max(0,(Fd-drag)/MASS)*dt;t+=dt;
+  }
+  m.t020=t<30?t:null;
+ }
+ return m;
+}
+var M0=model(F),M=null;
+
+/* ---------- Canvas ---------- */
+function setupCanvas(el){
+ var dpr=Math.min(window.devicePixelRatio||1,2),w=el.clientWidth,h=el.clientHeight;
+ if(!w||!h)return null;
+ var pw=Math.round(w*dpr),ph=Math.round(h*dpr);
+ if(el.width!==pw||el.height!==ph){el.width=pw;el.height=ph}
+ var c=el.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
+ return {c:c,w:w,h:h};
+}
+function drawDyno(){
+ var g=setupCanvas($('#dyno'));if(!g||!M)return;
+ var c=g.c,w=g.w,h=g.h;
+ var L=44,Rr=46,Tp=18,Bt=38,pw=w-L-Rr,ph=h-Tp-Bt,VX=90,TM=70,PM=3600;
+ var X=function(v){return L+v/VX*pw},YT=function(t){return Tp+ph-t/TM*ph},YP=function(p){return Tp+ph-p/PM*ph};
+ var i;
+ c.font='11px '+MONO;c.textBaseline='middle';c.lineWidth=1;
+ for(i=0;i<=5;i++){
+  var y=Math.round(Tp+ph*i/5)+.5;
+  c.strokeStyle=COL.line2;c.beginPath();c.moveTo(L,y);c.lineTo(L+pw,y);c.stroke();
+  c.textAlign='right';c.fillStyle=COL.accent;c.fillText(String(Math.round(TM-TM*i/5)),L-8,y);
+  c.textAlign='left';c.fillStyle=COL.heat;c.fillText((PM/1000*(1-i/5)).toFixed(1),L+pw+8,y);
+ }
+ c.textAlign='center';c.fillStyle=COL.faint;
+ for(i=0;i<=VX;i+=10){
+  var x=Math.round(X(i))+.5;
+  if(i>0){c.strokeStyle=COL.line2;c.beginPath();c.moveTo(x,Tp);c.lineTo(x,Tp+ph);c.stroke()}
+  c.fillText(String(i),x,Tp+ph+14);
+ }
+ c.fillText('km/h',L+pw/2,Tp+ph+29);
+ c.textAlign='right';c.fillStyle=COL.accent;c.fillText('Nm',L-8,7);
+ c.textAlign='left';c.fillStyle=COL.heat;c.fillText('kW',L+pw+8,7);
+
+ function pts(m,kind){
+  var a=[],v;
+  for(v=0;v<m.vlim;v+=0.5)a.push(v);
+  a.push(m.vlim);
+  return a.map(function(v){return kind==='t'?[X(v),YT(m.T(v))]:[X(v),YP(m.Pw(v))]});
+ }
+ function line(p,color,wd,dash){
+  c.beginPath();p.forEach(function(q,k){k?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])});
+  c.strokeStyle=color;c.lineWidth=wd;c.setLineDash(dash||[]);c.stroke();c.setLineDash([]);
+ }
+ line(pts(M0,'t'),COL.faint,1.2,[4,4]);
+ line(pts(M0,'p'),COL.faint,1.2,[4,4]);
+ var pt=pts(M,'t'),pp=pts(M,'p');
+ c.beginPath();pt.forEach(function(q,k){k?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])});
+ c.lineTo(pt[pt.length-1][0],Tp+ph);c.lineTo(pt[0][0],Tp+ph);c.closePath();
+ c.fillStyle='rgba(63,184,244,.10)';c.fill();
+ line(pt,COL.accent,2);line(pp,COL.heat,2);
+ /* Begrenzer */
+ var lx=Math.round(X(M.vlim))+.5;
+ c.strokeStyle=COL.warn;c.globalAlpha=.7;c.setLineDash([3,4]);c.beginPath();c.moveTo(lx,Tp);c.lineTo(lx,Tp+ph);c.stroke();c.setLineDash([]);c.globalAlpha=1;
+ c.fillStyle=COL.warn;c.textBaseline='top';
+ var lab='Limit '+Math.round(M.vlim);
+ if(lx>L+pw-80){c.textAlign='right';c.fillText(lab,lx-6,Tp+4)}else{c.textAlign='left';c.fillText(lab,lx+6,Tp+4)}
+ c.textBaseline='middle';
+ /* Spitzenleistung */
+ var px=X(M.peakV),py=YP(M.peakP);
+ c.fillStyle=COL.panel;c.strokeStyle=COL.heat;c.lineWidth=2;c.beginPath();c.arc(px,py,4.5,0,6.2832);c.fill();c.stroke();
+ c.fillStyle=COL.fg;c.textAlign=px>L+pw-70?'right':'left';
+ c.fillText((M.peakP/1000).toFixed(2)+' kW',px+(px>L+pw-70?-9:9),Math.max(py-12,Tp+14));
+}
+
+var curveGeo=null,hoverK=-1,dragK=-1;
+function handlePos(k){
+ var g=curveGeo,xp=S.gdz+(100-S.gdz)*k*0.2;
+ return {x:g.L+xp/100*g.pw,y:g.Tp+g.ph-S[CIDS[k-1]]/100*g.ph};
+}
+function drawCurve(){
+ var el=$('#curve'),g=setupCanvas(el);if(!g)return;
+ var c=g.c,w=g.w,h=g.h;
+ var L=40,Rr=16,Tp=16,Bt=36,pw=w-L-Rr,ph=h-Tp-Bt;
+ curveGeo={L:L,Tp:Tp,pw:pw,ph:ph};
+ var X=function(x){return L+x/100*pw},Y=function(y){return Tp+ph-y/100*ph};
+ var i;
+ c.font='11px '+MONO;c.textBaseline='middle';c.lineWidth=1;
+ c.fillStyle='rgba(255,155,74,.08)';c.fillRect(X(0),Tp,X(S.gdz)-X(0),ph);
+ for(i=0;i<=4;i++){
+  var y=Math.round(Y(i*25))+.5,x=Math.round(X(i*25))+.5;
+  c.strokeStyle=COL.line2;
+  c.beginPath();c.moveTo(L,y);c.lineTo(L+pw,y);c.stroke();
+  c.beginPath();c.moveTo(x,Tp);c.lineTo(x,Tp+ph);c.stroke();
+  c.fillStyle=COL.faint;c.textAlign='right';c.fillText(String(i*25),L-8,y);
+  c.textAlign='center';c.fillText(String(i*25),x,Tp+ph+14);
+ }
+ c.fillText('Gaspedalweg in %',L+pw/2,Tp+ph+29);
+ c.textAlign='left';c.fillStyle=COL.faint;c.fillText('Leistung %',L+6,Tp+8);
+ if(S.gdz>2){c.fillStyle=COL.heat;c.globalAlpha=.8;c.textAlign='left';c.fillText('Totzone',X(0)+6,Tp+ph-10);c.globalAlpha=1}
+ c.setLineDash([4,5]);c.strokeStyle=COL.faint;c.globalAlpha=.6;c.beginPath();c.moveTo(X(0),Y(0));c.lineTo(X(100),Y(100));c.stroke();c.setLineDash([]);c.globalAlpha=1;
+ var xs=0,first=true;
+ c.beginPath();
+ for(xs=0;xs<=100;xs+=1){var yy=pedalOut(xs);if(first){c.moveTo(X(xs),Y(yy));first=false}else c.lineTo(X(xs),Y(yy))}
+ c.lineTo(X(100),Y(0));c.lineTo(X(0),Y(0));c.closePath();c.fillStyle='rgba(63,184,244,.10)';c.fill();
+ c.beginPath();first=true;
+ for(xs=0;xs<=100;xs+=1){var y2=pedalOut(xs);if(first){c.moveTo(X(xs),Y(y2));first=false}else c.lineTo(X(xs),Y(y2))}
+ c.strokeStyle=COL.accent;c.lineWidth=2.2;c.stroke();
+ /* Live-Punkt */
+ if(sim.last){
+  var lx=X(sim.last.pedal*100),ly=Y(pedalOut(sim.last.pedal*100));
+  c.strokeStyle=COL.heat;c.globalAlpha=.45;c.lineWidth=1;c.beginPath();c.moveTo(lx,Y(0));c.lineTo(lx,ly);c.lineTo(X(0),ly);c.stroke();c.globalAlpha=1;
+  c.fillStyle=COL.heat;c.beginPath();c.arc(lx,ly,4,0,6.2832);c.fill();
+ }
+ /* Handles */
+ for(var k=1;k<=4;k++){
+  var hp=handlePos(k),act=(k===hoverK||k===dragK);
+  c.fillStyle=COL.panel;c.strokeStyle=COL.accent;c.lineWidth=2;
+  c.beginPath();c.arc(hp.x,hp.y,act?8:6,0,6.2832);c.fill();c.stroke();
+  c.fillStyle=COL.fg;c.textAlign='center';c.fillText(String(S[CIDS[k-1]]),hp.x,hp.y-(act?17:15));
+ }
+}
+(function(){
+ var el=$('#curve');
+ function pos(e){var r=el.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+ function pick(p){
+  if(!curveGeo)return -1;var best=-1,bd=22;
+  for(var k=1;k<=4;k++){var hp=handlePos(k),dd=Math.hypot(hp.x-p.x,hp.y-p.y);if(dd<bd){bd=dd;best=k}}
+  return best;
+ }
+ el.addEventListener('pointerdown',function(e){
+  var k=pick(pos(e));if(k<0)return;
+  dragK=k;hoverK=k;try{el.setPointerCapture(e.pointerId)}catch(_){}
+  e.preventDefault();drawCurve();
+ });
+ el.addEventListener('pointermove',function(e){
+  var p=pos(e);
+  if(dragK>0){
+   var val=Math.round(clamp((curveGeo.Tp+curveGeo.ph-p.y)/curveGeo.ph*100,0,100));
+   setParam(CIDS[dragK-1],val,'user');drawCurve();
+  }else{
+   var k=pick(p);el.style.cursor=k>0?'grab':'default';
+   if(k!==hoverK){hoverK=k;drawCurve()}
+  }
+ });
+ function end(){if(dragK>0){dragK=-1;drawCurve()}}
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+ el.addEventListener('pointerleave',function(){if(dragK<0&&hoverK>0){hoverK=-1;drawCurve()}});
+})();
+var CURVES={werk:[14,34,56,78],soft:[8,22,42,68],lin:[20,40,60,80],agg:[32,58,76,90]};
+function applyCurve(key){
+ var v=CURVES[key];if(!v)return;
+ CIDS.forEach(function(id,i){S[id]=v[i]});
+ rebuildCurve();CIDS.forEach(syncRow);setProfileSel('custom');
+ addLog('SET','THR.CRV = ['+v.join(', ')+'] %');
+ scheduleUpdate();
+}
+
+/* ---------- Simulation ---------- */
+var sim={t:0,v:0,thrF:0,volt:54.2,soc:0.78,tc:31,tm:34,tb:27,buf:[],last:null};
+var NBUF=200;
+function modeP(){return {v:S[S.mode+'_v']/100,a:S[S.mode+'_a']/100,r:S[S.mode+'_r']/100}}
+function simStep(dt){
+ sim.t+=dt;
+ var ph=sim.t%22,thr=0,brk=0;
+ if(ph<6)thr=.95;else if(ph<11)thr=.42;else if(ph<14)thr=0;else if(ph<17)brk=.75;else if(ph<19)thr=0;else thr=.6;
+ var mp=modeP();
+ var out=pedalOut(thr*100)/100;
+ sim.thrF+=(out-sim.thrF)*Math.min(1,dt/Math.max(.02,S.gfl/1000));
+ var kmh=sim.v*3.6,vl=M.vlim*mp.v;
+ var drive=sim.thrF*mp.a;if(kmh>=vl)drive=0;
+ var tq=M.T(Math.max(kmh,0.3))*drive;
+ if(S.lnc&&ph<1.5)tq*=1.12;
+ var Fd=tq*0.88/R,drag=12+0.32*sim.v*sim.v,Fr=0,irg=0,Fm=0;
+ if(brk>0){
+  Fm=brk*140;
+  if(kmh>S.rgv){var frac=(S.rg/100)*mp.r;Fr=brk*frac*(S.rgi*0.62)/R*0.85;irg=S.rgi*brk*frac}
+ }
+ sim.v+=((Fd-drag-Fr-Fm)/MASS)*dt;
+ sim.v=clamp(sim.v,0,vl/3.6);
+ var iph=brk>0?-irg:tq/(0.62*(1+S.adv*0.004));
+ var pel=tq*(sim.v/R)/0.9;
+ var ib=brk>0?-irg*0.5:Math.min(S.ibat,pel/Math.max(40,sim.volt));
+ sim.soc=Math.max(.2,sim.soc-ib*dt/3600/14*6);
+ sim.volt=14*(3.30+sim.soc*0.78)-ib*0.06;
+ var eqC=28+0.34*(iph>0?iph:0)*(S.pwm/16)+0.1*Math.abs(ib),eqM=27+0.5*(iph>0?iph:0)*0.9;
+ sim.tc+=(eqC-sim.tc)*dt*0.05;sim.tm+=(eqM-sim.tm)*dt*0.04;
+ var noise=(Math.random()-.5);
+ sim.last={v:sim.v*3.6,i:iph+noise*0.6,u:sim.volt+noise*0.04,pedal:thr,ib:ib};
+ sim.buf.push(sim.last);if(sim.buf.length>NBUF)sim.buf.shift();
+}
+function prefill(){sim.t=0;sim.v=0;sim.thrF=0;sim.buf=[];for(var i=0;i<NBUF+40;i++)simStep(0.05)}
+function drawTele(){
+ var g=setupCanvas($('#tele'));if(!g||!M)return;
+ var c=g.c,w=g.w,h=g.h;
+ var lanes=[
+  {k:'v',n:'Geschwindigkeit',u:'km/h',min:0,max:Math.max(30,M.vlim*1.15),col:COL.accent,dec:1},
+  {k:'i',n:'Phasenstrom',u:'A',min:-(S.rgi+6),max:Math.max(40,S.phase*1.08),col:COL.heat,dec:1},
+  {k:'u',n:'Akkuspannung',u:'V',min:44,max:59,col:COL.ok,dec:1}
+ ];
+ var lh=h/3,pad=14,lw=w-pad*2;
+ c.font='10.5px '+MONO;c.textBaseline='middle';
+ lanes.forEach(function(L,idx){
+  var top=idx*lh+6,bot=(idx+1)*lh-6,hh=bot-top;
+  c.strokeStyle=COL.line2;c.lineWidth=1;
+  c.beginPath();c.moveTo(pad,Math.round(bot+6)+.5);c.lineTo(w-pad,Math.round(bot+6)+.5);c.stroke();
+  var Y=function(v){return bot-(clamp(v,L.min,L.max)-L.min)/(L.max-L.min)*hh};
+  if(L.min<0){c.setLineDash([2,4]);c.beginPath();c.moveTo(pad,Y(0));c.lineTo(w-pad,Y(0));c.stroke();c.setLineDash([])}
+  c.textAlign='left';c.fillStyle=COL.faint;c.fillText(L.n.toUpperCase(),pad,top+5);
+  var b=sim.buf;if(b.length<2)return;
+  c.beginPath();
+  b.forEach(function(s,i){var x=pad+i/(NBUF-1)*lw,y=Y(s[L.k]);i?c.lineTo(x,y):c.moveTo(x,y)});
+  c.strokeStyle=L.col;c.lineWidth=1.8;c.lineJoin='round';c.stroke();
+  var last=b[b.length-1],lx=pad+(b.length-1)/(NBUF-1)*lw;
+  c.fillStyle=L.col;c.beginPath();c.arc(lx,Y(last[L.k]),3,0,6.2832);c.fill();
+  c.textAlign='right';c.fillStyle=COL.fg;c.fillText(last[L.k].toFixed(L.dec)+' '+L.u,w-pad,top+5);
+ });
+}
+var rdEls={v:$('#rdV'),i:$('#rdI'),u:$('#rdU'),tc:$('#rdTc'),tm:$('#rdTm'),stU:$('#stU')};
+function writeReadouts(){
+ var s=sim.last;if(!s)return;
+ rdEls.v.textContent=s.v.toFixed(1);rdEls.i.textContent=s.i.toFixed(1);rdEls.u.textContent=s.u.toFixed(1);
+ rdEls.tc.textContent=Math.round(sim.tc);rdEls.tm.textContent=Math.round(sim.tm);
+ rdEls.stU.textContent=s.u.toFixed(1)+' V';
+}
+
+/* ---------- Zellen ---------- */
+var cellOff=[3,-2,5,0,-4,2,6,-1,-3,1,4,-5,0,2],cellEls=[],cellJit=cellOff.map(function(){return 0});
+(function(){
+ var host=$('#cells');
+ for(var i=0;i<14;i++){
+  var d=document.createElement('div');d.className='cell';
+  d.innerHTML='<div class="cb"><i></i></div><span>Z'+(i+1)+'</span>';
+  host.appendChild(d);cellEls.push({d:d,bar:$('i',d)});
+ }
+})();
+function updateCells(){
+ if($('#v-battery').hidden)return;
+ var mean=3.30+sim.soc*0.78,vals=cellOff.map(function(o,i){return mean+(o+cellJit[i])/1000});
+ var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),mi=vals.indexOf(mn),ma=vals.indexOf(mx);
+ vals.forEach(function(v,i){
+  var pct=15+(v-(mean-.012))/.024*85;
+  cellEls[i].bar.style.height=clamp(pct,8,100)+'%';
+  cellEls[i].d.title='Zelle '+(i+1)+': '+v.toFixed(3).replace('.',',')+' V';
+  cellEls[i].d.classList.toggle('bal',(v-mn)*1000>S.bal);
+ });
+ var dmv=Math.round((mx-mn)*1000);
+ $('#cellTag').textContent='Δ '+dmv+' mV';
+ $('#bPack').textContent=vals.reduce(function(a,b){return a+b},0).toFixed(1);
+ $('#bSoc').textContent=Math.round(sim.soc*100);
+ $('#bMinMax').textContent=mn.toFixed(3).replace('.',',')+' (Z'+(mi+1)+') · '+mx.toFixed(3).replace('.',',')+' (Z'+(ma+1)+')';
+ var balN=cellEls.filter(function(c){return c.d.classList.contains('bal')}).length;
+ $('#bState').textContent=balN?'Ausgleich '+balN+' Z.':'Ausgeglichen';
+}
+setInterval(function(){cellJit=cellJit.map(function(){return Math.round((Math.random()-.5)*3)});updateCells()},900);
+
+/* ---------- Anzeigen ---------- */
+function pctDelta(cur,base){if(!base)return '';var p=(cur/base-1)*100;if(Math.abs(p)<0.5)return 'wie Werk';return (p>0?'+':'−')+Math.abs(p).toFixed(0)+' % zu Werk'}
+function setKd(el,txt,dir){el.textContent=txt;el.className='kd'+(dir>0?' up':dir<0?' down':'')}
+function updateStats(){
+ $('#kPw').textContent=(M.peakP/1000).toFixed(2);
+ $('#kTq').textContent=M.peakT.toFixed(1);
+ $('#kVm').textContent=Math.round(M.vlim);
+ $('#kAc').textContent=M.t020===null?'–':M.t020.toFixed(1);
+ setKd($('#kPwD'),pctDelta(M.peakP,M0.peakP),M.peakP-M0.peakP);
+ setKd($('#kTqD'),pctDelta(M.peakT,M0.peakT),M.peakT-M0.peakT);
+ setKd($('#kVmD'),pctDelta(M.vlim,M0.vlim),M.vlim-M0.vlim);
+ if(M.t020===null)setKd($('#kAcD'),'Limit unter 20',0);
+ else{var dd=M.t020-M0.t020;setKd($('#kAcD'),Math.abs(dd)<0.05?'wie Werk':(dd>0?'+':'−')+Math.abs(dd).toFixed(1).replace('.',',')+' s zu Werk',-dd)}
+}
+var STAGES=[
+ ['Serienzustand','Alle Werte entsprechen dem Auslieferungszustand.'],
+ ['Alltag','Moderate Reserven bei geringer Mehrbelastung.'],
+ ['Sport','Spürbar mehr Leistung. Controller und Akku arbeiten näher am Limit.'],
+ ['Maximal','Hohe Belastung. Temperaturen und Akkuzustand regelmäßig prüfen.'],
+ ['Rennsport','Grenzbereich der Hardware. Nur für kurze Einsätze auf Privatgelände.']
+];
+function updateStage(){
+ var fw=S.fwOn?S.fw:0;
+ var sc=((S.phase-30)/60)*.3+((S.ibat-18)/42)*.3+((Math.max(S.vmax,20)-20)/100)*.25+(fw/40)*.15;
+ var n=sc<.02?0:sc<.14?1:sc<.32?2:sc<.55?3:4;
+ $('#stageN').textContent='STAGE '+n;
+ $('#stageName').textContent=STAGES[n][0];
+ $('#stageNote').textContent=STAGES[n][1];
+ var segs=$('#stageSegs');segs.className='segs'+(n>=3?' hot':'');
+ $$('i',segs).forEach(function(el,i){el.classList.toggle('on',i<n)});
+ var ok=S.vmax<=20;
+ var p=$('#ekfv');p.className='pill '+(ok?'ok':'crit');p.textContent=ok?'eKFV konform':'eKFV nicht konform';
+}
+function meter(idBar,idVal,pct){
+ var b=$(idBar),v=$(idVal),cls=pct<60?'':pct<85?'warn':'crit';
+ b.style.width=clamp(pct,0,100)+'%';b.className=cls;v.textContent=Math.round(pct)+' %';v.className=cls;
+}
+function updateLoads(){
+ meter('#brC','#ldC',S.phase/80*100);
+ meter('#brM','#ldM',Math.pow(S.phase/65,2)*100);
+ meter('#brB','#ldB',S.ibat/50*100);
+}
+var voided=false;
+function updateCompliance(){
+ var ok=S.vmax<=20;
+ var rows=[
+  ['Höchstgeschwindigkeit','Grenzwert 20 km/h',S.vmax+' km/h',ok?'ok':'crit',ok?'Eingehalten':'Überschritten'],
+  ['Betriebserlaubnis','Nach eKFV',ok?'Gültig':'Erloschen',ok?'ok':'crit',ok?'Gültig':'Erloschen'],
+  ['Herstellergarantie','Parameterzähler im Controller',voided?'Erloschen':'Intakt',voided?'crit':'ok',voided?'Erloschen':'Intakt']
+ ];
+ $('#compl').innerHTML=rows.map(function(r){return '<div class="cl"><div>'+r[0]+'<small>'+r[1]+(r[0]==='Höchstgeschwindigkeit'?' · aktuell '+r[2]:'')+'</small></div><span class="pill '+r[3]+'">'+r[4]+'</span></div>'}).join('');
+}
+function updateModeTable(){
+ $('#modeTbl').innerHTML=MODES.map(function(m){
+  var v=Math.round(M.vlim*S[m.k+'_v']/100),a=S[m.k+'_a'],r=S[m.k+'_r'],pk=Math.round(M.peakP*a/100/10)*10;
+  return '<tr data-k="'+m.k+'"'+(S.mode===m.k?' class="act"':'')+'><td>'+m.n+(S.mode===m.k?' · aktiv':'')+'</td><td>'+v+' km/h</td><td>'+a+' %</td><td>'+r+' %</td><td>'+pk+' W</td></tr>';
+ }).join('');
+}
+function hash(){
+ var keys=Object.keys(S).sort(),h=2166136261>>>0,str=keys.map(function(k){return k+'='+S[k]}).join(';'),i;
+ for(i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0}
+ return ('00000000'+h.toString(16)).slice(-8).toUpperCase();
+}
+function pending(){return Object.keys(F).filter(function(k){return S[k]!==B[k]})}
+function updateActionBar(){
+ var n=pending().length,btn=$('#btnWrite');
+ $('#pendT').textContent=n?n+(n===1?' ungeschriebene Änderung':' ungeschriebene Änderungen'):'Gerät und Editor sind synchron';
+ $('#pendDot').style.background=n?COL.accent:COL.ok;
+ btn.disabled=n===0;
+ $('#crcTag').textContent='CRC32 '+hash();
+ var mn=MODES.filter(function(m){return m.k===S.mode})[0].n;
+ $('#stMode').textContent=mn;
+}
+var raf=0,curView='overview';
+function scheduleUpdate(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;updateAll()})}
+function updateAll(){
+ M=model(S);
+ drawDyno();
+ if(curView==='throttle')drawCurve();
+ updateStats();updateStage();updateLoads();updateModeTable();updateCompliance();updateActionBar();
+ if(reduce){prefill();writeReadouts();drawTele()}
+}
+
+/* ---------- Modi ---------- */
+var modeSeg=$('#modeSeg');
+function renderModeSeg(){
+ modeSeg.innerHTML=MODES.map(function(m){return '<button type="button" data-k="'+m.k+'" aria-pressed="'+(S.mode===m.k?'true':'false')+'">'+m.n+'</button>'}).join('');
+}
+function renderModeRows(){
+ var m=MODES.filter(function(x){return x.k===S.mode})[0],host=$('#modeRows');
+ host.innerHTML='';
+ ['_v','_a','_r'].forEach(function(s){host.appendChild(buildRow(dmap[m.k+s]))});
+ $('#modeTitle').textContent='Modus '+m.n;
+ $('#modeTag').textContent='VCU.MODE['+MODES.indexOf(m)+']';
+}
+function selectMode(k){
+ if(S.mode===k)return;
+ S.mode=k;setProfileSel('custom');
+ addLog('SET','VCU.MODE_ACTIVE = '+MODES.filter(function(m){return m.k===k})[0].n);
+ renderModeSeg();renderModeRows();scheduleUpdate();
+}
+modeSeg.addEventListener('click',function(e){var b=e.target.closest('button');if(b)selectMode(b.dataset.k)});
+$('#modeTbl').addEventListener('click',function(e){var tr=e.target.closest('tr');if(tr)selectMode(tr.dataset.k)});
+$('#curveSeg').addEventListener('click',function(e){var b=e.target.closest('button');if(b)applyCurve(b.dataset.c)});
+
+/* ---------- Profile ---------- */
+var PRESETS={
+ werk:{n:'Werkseinstellung',v:{}},
+ s1:{n:'Stage 1 · Alltag',v:{phase:42,ibat:26,vmax:30,ramp:4,adv:3,pwm:18,c20:20,c40:40,c60:60,c80:80,gfl:120}},
+ s2:{n:'Stage 2 · Sport',v:{phase:56,ibat:34,vmax:45,ramp:6,fwOn:true,fw:12,adv:6,pwm:20,gdz:5,gfl:90,c20:24,c40:48,c60:70,c80:88,uv:38.5,rg:50,rgi:16}},
+ s3:{n:'Stage 3 · Maximal',v:{phase:75,ibat:48,vmax:68,ramp:8,lnc:true,fwOn:true,fw:26,adv:10,pwm:22,dt:400,gdz:3,gfl:60,c20:32,c40:58,c60:78,c80:92,uv:37.2,tc:95,tm:135,oc:6,rg:35,rgi:22,spt_a:100}},
+ off:{n:'Gelände · Drehmoment',v:{phase:62,ibat:38,vmax:20,ramp:5,gfl:200,c20:8,c40:22,c60:44,c80:70,rg:70,rgi:20,rgv:4}}
+};
+function toast(msg){
+ var t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(function(){t.hidden=true},2200);
+}
+function applyPreset(key,quiet){
+ var p=PRESETS[key];if(!p)return;
+ Object.keys(F).forEach(function(k){if(k!=='mode')S[k]=F[k]});
+ Object.keys(p.v).forEach(function(k){
+  if(dmap[k])S[k]=snap(dmap[k],p.v[k]);else if(tmap[k])S[k]=!!p.v[k];
+ });
+ CIDS.forEach(function(id,i){if(i>0)S[id]=Math.max(S[id],S[CIDS[i-1]])});
+ rebuildCurve();syncAll();setProfileSel(key);
+ addLog('SET','PROFILE '+p.n+' geladen (nicht geschrieben)');
+ if(!quiet)toast('Profil geladen: '+p.n);
+ scheduleUpdate();
+}
+$('#prof').addEventListener('change',function(e){if(e.target.value!=='custom')applyPreset(e.target.value)});
+$('#btnReset').addEventListener('click',function(){applyPreset('werk',true);toast('Auf Werkseinstellung zurückgesetzt, noch nicht geschrieben')});
+
+/* ---------- Navigation ---------- */
+var viewIds=['overview','motor','throttle','battery','modes','safety','log'];
+function showView(v){
+ curView=v;
+ viewIds.forEach(function(id){$('#v-'+id).hidden=(id!==v)});
+ $$('.nav-item').forEach(function(b){if(b.dataset.view===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ $('#content').scrollTop=0;
+ requestAnimationFrame(function(){updateAll();drawTele();updateCells()});
+}
+$$('.nav-item').forEach(function(b){b.addEventListener('click',function(){showView(b.dataset.view)})});
+$('#logClear').addEventListener('click',function(){logEl.innerHTML='';addLog('INFO','Protokoll geleert')});
+
+/* ---------- Gerät ---------- */
+var devices={
+ g3:{n:'Ninebot G3 Max',ble:'4A:7F:C2',sn:'N4GSD2410-31847',fw:'3.2.18',bl:'1.4.2',bms:'BMS-14S 2.1.7',km:'1.284 km',rssi:-58},
+ s1:{n:'Joyor S1',ble:'91:0D:E4',sn:'JY-S1-0023981',fw:'2.8.4',bl:'1.3.0',bms:'BMS-13S 1.9.2',km:'3.907 km',rssi:-63},
+ x4:{n:'Xiaomi 4 Pro',ble:'C3:55:1A',sn:'29184/00418275',fw:'1.6.12',bl:'1.2.8',bms:'BMS-10S 3.0.1',km:'642 km',rssi:-61},
+ gen:{n:'BLDC-Controller',ble:'22:B8:7E',sn:'GEN-0007741',fw:'0.9.40',bl:'1.0.1',bms:'BMS-14S 1.4.0',km:'–',rssi:-67}
+};
+var curDev='g3',connTimer=null;
+function showDevice(k){
+ var d=devices[k];
+ $('#iModel').textContent=d.n;$('#iSn').textContent=d.sn;$('#iBms').textContent=d.bms;
+ $('#iFw').textContent=d.fw;$('#iBl').textContent=d.bl;$('#iKm').textContent=d.km;
+ $('#stFw').textContent=d.fw;$('#stDev').textContent='BLE '+d.ble+' · '+d.rssi+' dBm';
+ $('#fmDev').textContent=d.n;
+}
+function setConn(state,txt){var c=$('#conn');c.className='chip '+state;$('#connT').textContent=txt}
+function connect(k){
+ clearTimeout(connTimer);curDev=k;var d=devices[k];
+ setConn('busy','Suche …');addLog('BLE','Scan nach '+d.n+' ('+d.ble+')');
+ connTimer=setTimeout(function(){
+  setConn('busy','Handshake …');addLog('AUTH','Seed/Key-Austausch Level 3');
+  connTimer=setTimeout(function(){
+   showDevice(k);setConn('ok','Verbunden');
+   addLog('BLE','Verbunden mit '+d.n+' · RSSI '+d.rssi+' dBm');
+   addLog('READ','Parametersatz gelesen: 214 Register');
+  },700);
+ },650);
+}
+$('#dev').addEventListener('change',function(e){connect(e.target.value)});
+
+/* ---------- Schreiben ---------- */
+var running=false;
+var fm=$('#flashModal'),fmPre=$('#fmPre'),fmRun=$('#fmRun'),fmGo=$('#fmGo'),fmCancel=$('#fmCancel'),fmAck=$('#fmAck');
+function unitOf(id){return dmap[id]?' '+dmap[id].unit:''}
+function valText(id,v){
+ if(id==='mode')return MODES.filter(function(m){return m.k===v})[0].n;
+ if(tmap[id])return v?'EIN':'AUS';
+ return fnum(dmap[id],v)+unitOf(id);
+}
+function metaOf(id){return id==='mode'?'VCU.MODE_ACTIVE':(dmap[id]||tmap[id]).code}
+function openFlash(){
+ var list=pending();if(!list.length||running)return;
+ $('#fmDiff').innerHTML=list.slice(0,8).map(function(id){return '<div><span>'+metaOf(id)+'</span><span>'+valText(id,B[id])+' → '+valText(id,S[id])+'</span></div>'}).join('')+(list.length>8?'<div><span>… und '+(list.length-8)+' weitere</span><span></span></div>':'');
+ fmPre.style.display='flex';fmRun.style.display='none';fmRun.hidden=true;$('#fmDone').hidden=true;
+ fmAck.checked=false;fmGo.disabled=true;fmGo.hidden=false;fmCancel.textContent='Abbrechen';fmCancel.disabled=false;
+ $('#fmT').textContent='Parameter schreiben';
+ fm.hidden=false;fmAck.focus();
+}
+function closeFlash(){if(running)return;fm.hidden=true}
+fmAck.addEventListener('change',function(){fmGo.disabled=!fmAck.checked});
+fmCancel.addEventListener('click',closeFlash);
+fm.addEventListener('click',function(e){if(e.target===fm)closeFlash()});
+document.addEventListener('keydown',function(e){
+ if(e.key==='Escape'&&!fm.hidden)closeFlash();
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(fm.hidden)openFlash()}
+});
+$('#btnWrite').addEventListener('click',openFlash);
+fmGo.addEventListener('click',function(){
+ var n=pending().length,crc=hash();
+ var steps=[
+  ['Verbindung prüfen','Handshake 0x5A · Seed/Key Level 3',600],
+  ['Parametersatz validieren','CRC32 '+crc+' · '+n+' Änderungen',800],
+  ['Controller in Bootmodus setzen','BOOT0 high · Reset',1000],
+  ['Flash-Sektor löschen','0x0800C000 – 0x0800FFFF',1200],
+  ['Parameter schreiben','214 Register · 1.856 Bytes',2000],
+  ['Gegenlesen und verifizieren','Vergleich 100 %',1000],
+  ['Controller neu starten','Warte auf Bus',800]
+ ];
+ var total=steps.reduce(function(a,s){return a+s[2]},0),acc=0,i=0;
+ running=true;fmPre.style.display='none';fmRun.style.display='flex';fmRun.hidden=false;
+ fmGo.hidden=true;fmCancel.disabled=true;
+ $('#fmT').textContent='Schreibvorgang läuft';
+ var list=$('#fmSteps'),bar=$('#fmBar');
+ list.innerHTML=steps.map(function(s){return '<li data-s="wait"><i class="si"></i><div><b>'+s[0]+'</b><small>'+s[1]+'</small></div></li>'}).join('');
+ bar.style.transition='none';bar.style.width='0%';
+ addLog('WRITE','Schreibvorgang gestartet · '+n+' Änderungen · CRC32 '+crc);
+ var items=$$('li',list);
+ function next(){
+  if(i>0)items[i-1].dataset.s='done';
+  if(i>=steps.length){finish();return}
+  items[i].dataset.s='run';
+  var s=steps[i];acc+=s[2];
+  bar.style.transition='width '+s[2]+'ms linear';bar.style.width=(acc/total*100)+'%';
+  addLog('WRITE',s[0]+' · '+s[1]);
+  i++;setTimeout(next,s[2]);
+ }
+ function finish(){
+  Object.keys(F).forEach(function(k){B[k]=S[k]});
+  if(Object.keys(F).some(function(k){return S[k]!==F[k]}))voided=true;
+  addLog('WRITE','Parametersatz übernommen · CRC32 '+hash());
+  running=false;syncAll();updateAll();
+  $('#fmT').textContent='Fertig';$('#fmDone').hidden=false;
+  fmCancel.disabled=false;fmCancel.textContent='Schließen';
+ }
+ next();
+});
+
+/* ---------- Start ---------- */
+$$('[data-g]').forEach(function(el){buildGroup(el,layout[el.dataset.g])});
+rebuildCurve();renderModeSeg();renderModeRows();showDevice('g3');
+M=model(S);
+(function seed(){
+ var now=Date.now(),lines=[
+  ['INFO','Ohmwerk Tuning Suite 4.2.1 gestartet'],
+  ['BLE','Scan abgeschlossen: 1 Gerät in Reichweite'],
+  ['BLE','Verbunden mit Ninebot G3 Max · RSSI −58 dBm'],
+  ['AUTH','Seed/Key-Austausch Level 3 erfolgreich'],
+  ['READ','Parametersatz gelesen: 214 Register'],
+  ['READ','Fehlerspeicher: 0 aktive Einträge'],
+  ['INFO','Editor mit Geräteparametern abgeglichen']
+ ];
+ lines.forEach(function(l,i){addLog(l[0],l[1],new Date(now-(lines.length-i)*2400))});
+})();
+prefill();writeReadouts();
+function clock(){$('#clock').textContent=new Date().toLocaleTimeString('de-DE',{hour12:false})}
+clock();setInterval(clock,1000);
+updateAll();drawTele();
+if(window.ResizeObserver){
+ var ro=new ResizeObserver(function(){drawDyno();drawTele();if(curView==='throttle')drawCurve()});
+ ['#dyno','#tele','#curve'].forEach(function(s){ro.observe($(s))});
+}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){drawDyno();drawTele();if(curView==='throttle')drawCurve()});
+
+if(!reduce){
+ var last=performance.now(),acc=0,lastRead=0;
+ (function frame(now){
+  var dt=Math.min(0.1,(now-last)/1000);last=now;acc+=dt;
+  while(acc>=0.05){simStep(0.05);acc-=0.05}
+  if(curView==='overview'){drawTele()}
+  if(curView==='throttle')drawCurve();
+  if(now-lastRead>120){writeReadouts();lastRead=now}
+  requestAnimationFrame(frame);
+ })(performance.now());
+}
+})();
+</script>
+
+</body></html>
